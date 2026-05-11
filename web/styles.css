@@ -24,7 +24,7 @@ body {
 }
 
 .shell {
-  max-width: 524px;
+  max-width: 760px;
   margin: 0 auto;
   padding: 2rem 1.25rem 3rem;
 }
@@ -455,16 +455,18 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
 .list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 2.75rem;
 }
 
 .row {
   display: grid;
-  grid-template-columns: 7.5rem 1fr;
+  position: relative;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
   gap: 1rem;
   align-items: baseline;
-  padding: 0.65rem 0.85rem;
+  padding: 0.65rem;
   margin-bottom: 0.35rem;
+  margin-inline: -2px;
   border: 1px solid var(--border);
   border-radius: 2px;
   background: rgba(0, 200, 83, 0.03);
@@ -476,18 +478,44 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
   background: rgba(255, 23, 68, 0.06);
 }
 
+.row__no {
+  position: absolute;
+  left: -2.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.8rem;
+  min-height: 1.45rem;
+  /* padding: 0 0.3rem; */
+  border: 1px solid var(--border);
+  background: rgba(0, 200, 83, 0.08);
+  color: var(--fg-dim);
+  font-size: 0.74rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  align-self: center;
+}
+
 .row__date {
+  grid-column: 1;
   color: var(--fg);
   font-variant-numeric: tabular-nums;
 }
 
 .row__name {
+  grid-column: 2;
   color: var(--fg);
   font-weight: 600;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .row__name::before {
-  content: "| ";
+  content: " | ";
   color: var(--fg-dim);
   font-weight: 400;
 }

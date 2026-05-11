@@ -88,6 +88,7 @@ function buildSchedule(names) {
   const { ordered, anchorMissing } = orderNamesForWednesdays(sorted, anchor);
   const today = startOfLocalDay(new Date());
   const rows = ordered.map((name, i) => ({
+    no: i + 1,
     name,
     date: addWeeks(SERIES_START, i),
   }));
@@ -111,7 +112,7 @@ function buildSchedule(names) {
       li.classList.add("row--next");
       li.setAttribute("aria-current", "date");
     }
-    li.innerHTML = `<span class="row__date">${formatRowDate(r.date)}</span><span class="row__name">${escapeHtml(r.name)}</span>`;
+    li.innerHTML = `<span class="row__no">${r.no}</span><span class="row__date">${formatRowDate(r.date)}</span><span class="row__name">${escapeHtml(r.name)}</span>`;
     ul.appendChild(li);
   }
 

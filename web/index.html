@@ -17,7 +17,11 @@
       <header class="header">
         <div class="title-row">
           <h1 class="title" id="page-title">weekly_sharing_reminder</h1>
-          <div class="title-row__actions" role="toolbar" aria-label="Roster actions">
+          <div
+            class="title-row__actions"
+            role="toolbar"
+            aria-label="Roster actions"
+          >
             <button
               type="button"
               class="reminder-open-btn"
@@ -37,7 +41,9 @@
                 aria-hidden="true"
                 focusable="false"
               >
-                <use href="assets/calendar-and-clock-time.svg#calendar-clock-icon" />
+                <use
+                  href="assets/calendar-and-clock-time.svg#calendar-clock-icon"
+                />
               </svg>
             </button>
             <button
@@ -96,20 +102,23 @@
           </button>
         </header>
         <p class="reminder-modal__hint">
-          // Enter your roster name, then open Google Calendar or Outlook (same calendar used by
-          Microsoft Teams for work/school). Event is the day before your sharing Wednesday, 09:00
+          // Enter your roster name or No from the list, then open Google
+          Calendar or Outlook (same calendar used by Microsoft Teams for
+          work/school). Event is the day before your sharing Wednesday, 09:00
           local. Or download .ics for Apple Calendar etc.
         </p>
         <form id="reminder-form" class="reminder-form" novalidate>
           <label class="reminder-form__label">
-            <span class="reminder-form__label-text">name (as on roster)</span>
+            <span class="reminder-form__label-text"
+              >name or No (from roster)</span
+            >
             <input
               id="reminder-name"
               name="name"
               type="text"
               class="reminder-form__input"
               autocomplete="name"
-              placeholder="Exact spelling as in the list"
+              placeholder='Example: "Ting Chung Cheng" or "8"'
             />
           </label>
           <p
@@ -118,7 +127,11 @@
             role="status"
             aria-live="polite"
           ></p>
-          <div class="reminder-cal-grid" role="group" aria-label="Save to calendar">
+          <div
+            class="reminder-cal-grid"
+            role="group"
+            aria-label="Save to calendar"
+          >
             <button
               type="button"
               class="reminder-cal-btn"
@@ -175,8 +188,9 @@
           </button>
         </header>
         <p class="reminder-modal__hint">
-          // Names are saved in English alphabetical order; that order maps to Wednesdays from the
-          series start. Adding “Peggie” inserts after “Pang Yong Xian” and shifts later weeks.
+          // Names are saved in English alphabetical order; that order maps to
+          Wednesdays from the series start. Adding “Peggie” inserts after “Pang
+          Yong Xian” and shifts later weeks.
         </p>
         <div class="roster-edit-addrow">
           <input
@@ -191,7 +205,11 @@
             add
           </button>
         </div>
-        <ol class="roster-edit-list" id="roster-edit-list" aria-label="Current names"></ol>
+        <ol
+          class="roster-edit-list"
+          id="roster-edit-list"
+          aria-label="Current names"
+        ></ol>
         <p
           id="roster-edit-status"
           class="reminder-form__status"

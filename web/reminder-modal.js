@@ -19,10 +19,18 @@
     statusEl.classList.toggle("reminder-form__status--error", !!isError);
   }
 
-  function findScheduleRowByName(name) {
-    const q = name.trim().toLowerCase();
+  function findScheduleRowByNameOrNo(input) {
+    const q = input.trim();
     if (!q) return null;
-    return scheduleRows.find((r) => r.name.trim().toLowerCase() === q) || null;
+
+    if (/^\d+$/.test(q)) {
+      const no = Number.parseInt(q, 10);
+      if (Number.isInteger(no) && no > 0)
+        return scheduleRows.find((r) => Number(r.no) === no) || null;
+    }
+
+    const lower = q.toLowerCase();
+    return scheduleRows.find((r) => r.name.trim().toLowerCase() === lower) || null;
   }
 
   /** Tuesday 09:00 local, 30 min — day before sharing Wednesday */
@@ -70,15 +78,15 @@
   }
 
   function resolveRowOrSetStatus() {
-    const name = (nameInput?.value || "").trim();
-    if (!name) {
-      setStatus("Enter your name as it appears on the roster.", true);
+    const input = (nameInput?.value || "").trim();
+    if (!input) {
+      setStatus("Enter your name or roster No.", true);
       return null;
     }
-    const row = findScheduleRowByName(name);
+    const row = findScheduleRowByNameOrNo(input);
     if (!row) {
       setStatus(
-        "No match on the roster — use the same spelling as the list above.",
+        "No match on the roster — use exact name spelling or the No shown in the list.",
         true
       );
       return null;
@@ -93,7 +101,7 @@
 
     const { start, end } = reminderWindowForSharingDay(row.date);
     const { title, details, sharingDateDisplay } = buildEventCopy(
-      nameInput.value.trim(),
+      row.name,
       row.name,
       row.date
     );
