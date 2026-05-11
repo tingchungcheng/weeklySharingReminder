@@ -15,14 +15,16 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--fg);
-  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  font-family:
+    "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas,
+    monospace;
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
 .shell {
-  max-width: 520px;
+  max-width: 524px;
   margin: 0 auto;
   padding: 2rem 1.25rem 3rem;
 }
@@ -33,12 +35,382 @@ body {
   padding-bottom: 1rem;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.title-row__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .title {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--fg);
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-open-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: rgba(0, 200, 83, 0.08);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease,
+    color 0.18s ease;
+}
+
+.reminder-open-btn:hover {
+  border-color: var(--fg);
+  background: rgba(0, 200, 83, 0.14);
+}
+
+.reminder-open-btn:active {
+  transform: scale(0.94);
+}
+
+.reminder-open-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.reminder-open-btn__icon {
+  display: block;
+}
+
+/* --- Reminder modal (<dialog> + showModal = top layer; avoids in-flow / [hidden] bugs) --- */
+
+dialog.reminder-modal {
+  margin: 0;
+  border: none;
+  padding: 1rem;
+  max-width: 100vw;
+  width: 100vw;
+  max-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  background: transparent;
+  color: inherit;
+  overflow: hidden;
+  box-sizing: border-box;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+dialog.reminder-modal::backdrop {
+  /* Dim layer is our inner .reminder-modal__backdrop; keep native backdrop clear. */
+  background: transparent;
+}
+
+dialog.reminder-modal.reminder-modal--visible {
+  opacity: 1;
+}
+
+.reminder-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(0, 0, 0, 0.72);
+  cursor: pointer;
+}
+
+.reminder-modal__dialog {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: calc(100% - 2rem);
+  max-width: 400px;
+  max-height: min(120vh, 600px);
+  overflow: auto;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  transform: translate(-50%, -46%) scale(0.96);
+  opacity: 0;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.24s ease;
+}
+
+dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+
+.reminder-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.reminder-modal__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.reminder-modal__close {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  margin: -0.25rem -0.35rem 0 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.reminder-modal__close:hover {
+  color: var(--fg);
+  border-color: var(--border);
+}
+
+.reminder-modal__hint {
+  margin: 0 0 1.1rem;
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+  line-height: 1.45;
+}
+
+.reminder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.reminder-form__label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+}
+
+.reminder-form__label-text::before {
+  content: "// ";
+}
+
+.reminder-form__input {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(0, 200, 83, 0.04);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.85rem;
+}
+
+.reminder-form__input:focus {
+  outline: none;
+  border-color: var(--fg);
+  box-shadow: 0 0 0 1px var(--fg);
+}
+
+.reminder-form__input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reminder-form__status {
+  margin: 0;
+  min-height: 1.35em;
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+  white-space: pre-wrap;
+}
+
+.reminder-form__status--error {
+  color: var(--accent);
+}
+
+.reminder-form__submit {
+  margin-top: 0.25rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--fg);
+  border-radius: 2px;
+  background: rgba(0, 200, 83, 0.12);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.reminder-form__submit:hover:not(:disabled) {
+  background: rgba(0, 200, 83, 0.22);
+}
+
+.reminder-form__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.reminder-cal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.reminder-cal-btn {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--fg);
+  border-radius: 2px;
+  background: rgba(0, 200, 83, 0.12);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s ease;
+}
+
+.reminder-cal-btn:hover:not(:disabled) {
+  background: rgba(0, 200, 83, 0.22);
+}
+
+.reminder-cal-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.reminder-cal-btn--secondary {
+  border-color: var(--border);
+  background: rgba(0, 200, 83, 0.05);
+  font-weight: 500;
+}
+
+.reminder-cal-btn--secondary:hover:not(:disabled) {
+  background: rgba(0, 200, 83, 0.1);
+  border-color: var(--fg-dim);
+}
+
+/* --- Roster editor dialog --- */
+
+.roster-edit-modal__dialog {
+  max-width: 440px;
+  max-height: min(92vh, 640px);
+}
+
+.roster-edit-addrow {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.roster-edit-addrow .reminder-form__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.roster-edit-addrow .reminder-cal-btn {
+  width: auto;
+  flex-shrink: 0;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.roster-edit-list {
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+  max-height: min(48vh, 320px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(0, 200, 83, 0.03);
+}
+
+.roster-edit-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.45rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.roster-edit-row:last-child {
+  border-bottom: none;
+}
+
+.roster-edit-row__idx {
+  color: var(--fg-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.roster-edit-row__name {
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-edit-row__del {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(255, 23, 68, 0.08);
+  color: var(--accent);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.roster-edit-row__del:hover {
+  background: rgba(255, 23, 68, 0.18);
+}
+
+.roster-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.roster-edit-actions .reminder-cal-btn {
+  flex: 1;
+  min-width: 7rem;
 }
 
 .subtitle {

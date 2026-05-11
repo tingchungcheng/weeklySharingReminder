@@ -2,6 +2,13 @@ AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: Weekly sharing roster — HTTP API, Lambda, DynamoDB (SAM).
 
+Parameters:
+  EditRosterSecret:
+    Type: String
+    Description: Secret for PUT /roster — browser sends header X-Edit-Key with this value. Use a long random string (min 8 chars).
+    Default: ""
+    NoEcho: true
+
 Globals:
   Function:
     Timeout: 10
@@ -11,17 +18,10 @@ Globals:
       - x86_64
 
 Resources:
+  # CORS is returned from Lambdas + explicit OPTIONS routes. API-level CorsConfiguration
+  # was emitting OPTIONS 204 without Access-Control-* on /roster, breaking PUT preflight.
   WeeklySharingHttpApi:
     Type: AWS::Serverless::HttpApi
-    Properties:
-      CorsConfiguration:
-        AllowMethods:
-          - GET
-          - OPTIONS
-        AllowHeaders:
-          - Content-Type
-        AllowOrigins:
-          - "*"
 
   RosterTable:
     Type: AWS::DynamoDB::Table
@@ -52,10 +52,42 @@ Resources:
             ApiId: !Ref WeeklySharingHttpApi
             Path: /names
             Method: GET
+        GetNamesOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WeeklySharingHttpApi
+            Path: /names
+            Method: OPTIONS
+
+  PutRosterFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: handlers/put-roster/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref RosterTable
+          EDIT_ROSTER_SECRET: !Ref EditRosterSecret
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref RosterTable
+      Events:
+        PutRoster:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WeeklySharingHttpApi
+            Path: /roster
+            Method: PUT
+        PutRosterOptions:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WeeklySharingHttpApi
+            Path: /roster
+            Method: OPTIONS
 
 Outputs:
   HttpApiEndpoint:
-    Description: Base URL — use `${HttpApiEndpoint}/names` from the browser.
+    Description: Base URL — `${HttpApiEndpoint}/names` and PUT `${HttpApiEndpoint}/roster`
     Value: !GetAtt WeeklySharingHttpApi.ApiEndpoint
   HttpApiId:
     Description: HTTP API ID
@@ -66,3 +98,6 @@ Outputs:
   ListNamesFunctionArn:
     Description: Lambda function ARN
     Value: !GetAtt ListNamesFunction.Arn
+  PutRosterFunctionArn:
+    Description: Lambda PUT /roster
+    Value: !GetAtt PutRosterFunction.Arn

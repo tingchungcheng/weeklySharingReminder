@@ -3,8 +3,9 @@ frontend:
   phases:
     preBuild:
       commands:
-        - |
-          echo "window.WEEKLY_SHARING_API_BASE = \"${API_BASE_URL}\";" > web/api-config.js
+        - echo "window.WEEKLY_SHARING_API_BASE = \"${API_BASE_URL}\";" > web/api-config.js
+        - echo "window.WEEKLY_SHARING_EDIT_KEY = \"${EDIT_ROSTER_KEY}\";" >> web/api-config.js
+        - echo "window.WEEKLY_SHARING_SERIES_ANCHOR_NAME = \"${SERIES_ANCHOR_NAME}\";" >> web/api-config.js
   artifacts:
     baseDirectory: web
     files:

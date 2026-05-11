@@ -15,7 +15,37 @@ function json(statusCode, body) {
   };
 }
 
-export const handler = async () => {
+function cors204() {
+  return {
+    statusCode: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type,X-Edit-Key",
+      "Access-Control-Max-Age": "86400",
+    },
+    body: "",
+  };
+}
+
+/** Same ordering as put-roster: trim, unique (case-insensitive), English alpha sort. */
+function sortNamesAlpha(names) {
+  const seen = new Set();
+  const out = [];
+  for (const n of names) {
+    if (typeof n !== "string") continue;
+    const t = n.trim();
+    if (!t || seen.has(t.toLowerCase())) continue;
+    seen.add(t.toLowerCase());
+    out.push(t);
+  }
+  return out.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+}
+
+export const handler = async (event) => {
+  const method = event.requestContext?.http?.method || event.httpMethod;
+  if (method === "OPTIONS") return cors204();
+
   const tableName = process.env.TABLE_NAME;
   if (!tableName) {
     console.error("Missing env TABLE_NAME");
@@ -30,9 +60,10 @@ export const handler = async () => {
       })
     );
 
-    const names = Array.isArray(result.Item?.names)
+    const raw = Array.isArray(result.Item?.names)
       ? result.Item.names.filter((n) => typeof n === "string")
       : [];
+    const names = sortNamesAlpha(raw);
 
     return json(200, { names });
   } catch (err) {

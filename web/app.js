@@ -1,4 +1,4 @@
-/** First Wednesday maps to roster index 0 (Pang Yong Xian → 6 May when seeded in this order). */
+/** First Wednesday (week 0) maps to `WEEKLY_SHARING_SERIES_ANCHOR_NAME` after alphabetical sort + rotation. */
 const SERIES_START = new Date(2026, 4, 6); // 6 May 2026 (Wednesday)
 
 function startOfLocalDay(d) {
@@ -22,6 +22,37 @@ function normalizeApiBase(raw) {
   return raw.trim().replace(/\/+$/, "");
 }
 
+/** Same rules as Lambda: unique (case-insensitive), English alphabetical — defines Wednesday order. */
+function sortNamesAlpha(names) {
+  const seen = new Set();
+  const out = [];
+  for (const n of names) {
+    if (typeof n !== "string") continue;
+    const t = n.trim();
+    if (!t || seen.has(t.toLowerCase())) continue;
+    seen.add(t.toLowerCase());
+    out.push(t);
+  }
+  return out.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+}
+
+function getSeriesAnchorName() {
+  if (typeof window === "undefined") return "Pang Yong Xian";
+  const w = window.WEEKLY_SHARING_SERIES_ANCHOR_NAME;
+  const s = typeof w === "string" ? w.trim() : "";
+  return s || "Pang Yong Xian";
+}
+
+/** Alphabetical list rotated so `anchor` is index 0 (gets SERIES_START). */
+function orderNamesForWednesdays(sorted, anchor) {
+  const low = anchor.trim().toLowerCase();
+  if (!low) return { ordered: sorted, anchorMissing: false };
+  const idx = sorted.findIndex((n) => n.toLowerCase() === low);
+  if (idx < 0) return { ordered: sorted, anchorMissing: true };
+  const ordered = [...sorted.slice(idx), ...sorted.slice(0, idx)];
+  return { ordered, anchorMissing: false };
+}
+
 function escapeHtml(s) {
   return s
     .replace(/&/g, "&amp;")
@@ -40,7 +71,7 @@ function setSubtitle(lines, modifierClass) {
 
 async function fetchNames(apiBase) {
   const url = `${apiBase}/names`;
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (!data || !Array.isArray(data.names))
@@ -52,8 +83,11 @@ async function fetchNames(apiBase) {
 }
 
 function buildSchedule(names) {
+  const sorted = sortNamesAlpha(names);
+  const anchor = getSeriesAnchorName();
+  const { ordered, anchorMissing } = orderNamesForWednesdays(sorted, anchor);
   const today = startOfLocalDay(new Date());
-  const rows = names.map((name, i) => ({
+  const rows = ordered.map((name, i) => ({
     name,
     date: addWeeks(SERIES_START, i),
   }));
@@ -80,12 +114,51 @@ function buildSchedule(names) {
     li.innerHTML = `<span class="row__date">${formatRowDate(r.date)}</span><span class="row__name">${escapeHtml(r.name)}</span>`;
     ul.appendChild(li);
   }
+
+  if (typeof window.__weeklySharingSetScheduleForReminder === "function")
+    window.__weeklySharingSetScheduleForReminder(rows);
+
+  return { anchorMissing };
+}
+
+async function fetchAndBuildSchedule(apiBase) {
+  const names = await fetchNames(apiBase);
+  if (names.length === 0)
+    throw new Error("Empty names list — seed DynamoDB pk=ROSTER");
+  const { anchorMissing } = buildSchedule(names);
+  const n = sortNamesAlpha(names).length;
+  const lines = [
+    "// next slot highlighted — Wednesdays follow roster A→Z, rotated so week 0 = series anchor",
+    `// anchor: ${getSeriesAnchorName()} on ${formatRowDate(SERIES_START)} — ${n} names`,
+  ];
+  if (anchorMissing)
+    lines.unshift(
+      `// roster has no "${getSeriesAnchorName()}" — using A→Z order for dates (fix name or WEEKLY_SHARING_SERIES_ANCHOR_NAME)`
+    );
+  setSubtitle(lines, anchorMissing ? "subtitle--error" : null);
 }
 
 async function init() {
   const apiBase = normalizeApiBase(
     typeof window !== "undefined" ? window.WEEKLY_SHARING_API_BASE : ""
   );
+
+  window.__weeklySharingReloadSchedule = async () => {
+    const b = normalizeApiBase(
+      typeof window !== "undefined" ? window.WEEKLY_SHARING_API_BASE : ""
+    );
+    if (!b) return;
+    setSubtitle(["// reloading roster…"], "subtitle--muted");
+    try {
+      await fetchAndBuildSchedule(b);
+    } catch (e) {
+      console.error(e);
+      setSubtitle(
+        ["// reload failed", `// ${e.message || e}`],
+        "subtitle--error"
+      );
+    }
+  };
 
   if (!apiBase) {
     setSubtitle(
@@ -98,31 +171,34 @@ async function init() {
     return;
   }
 
-  setSubtitle(["// loading roster…"], "subtitle--muted");
-
-  try {
-    const names = await fetchNames(apiBase);
-    if (names.length === 0)
-      throw new Error("Empty names list — seed DynamoDB pk=ROSTER");
-
-    buildSchedule(names);
+  if (typeof location !== "undefined" && location.protocol === "file:") {
     setSubtitle(
       [
-        "// next slot highlighted — roster from API",
-        `// ${names.length} names · Wednesdays from series start`,
-      ],
-      null
-    );
-  } catch (e) {
-    console.error(e);
-    setSubtitle(
-      [
-        "// failed to load roster",
-        `// ${e.message}`,
-        "// check api-config.js URL, Lambda, CORS, and DynamoDB seed",
+        "// opened as file:// — use a local HTTP server instead of double‑clicking index.html",
+        "// from repo root:",
+        "//   python3 -m http.server 8080 --directory web",
+        "// then open http://localhost:8080/  (api-config.js must list your API base URL)",
       ],
       "subtitle--error"
     );
+    return;
+  }
+
+  setSubtitle(["// loading roster…"], "subtitle--muted");
+
+  try {
+    await fetchAndBuildSchedule(apiBase);
+  } catch (e) {
+    console.error(e);
+    const msg = e && e.message ? String(e.message) : "Unknown error";
+    const lines = ["// failed to load roster", `// ${msg}`];
+    if (/failed to fetch/i.test(msg) || e instanceof TypeError) {
+      lines.push(
+        "// often: file:// (use http server), CORS on PUT until sam deploy, or extension — see api-config WEEKLY_SHARING_DEV_API_PROXY + sam/scripts/dev_http_server.py"
+      );
+    }
+    lines.push("// check api-config.js URL, Lambda, CORS, and DynamoDB seed");
+    setSubtitle(lines, "subtitle--error");
   }
 }
 
