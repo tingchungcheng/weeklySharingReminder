@@ -7,3 +7,6 @@
 
 # If you run npm install inside a Lambda folder locally
 sam/handlers/**/node_modules/
+
+# Local frontend runtime config (contains real endpoints/client IDs).
+web/api-config.js

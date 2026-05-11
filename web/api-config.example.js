@@ -1,16 +1,10 @@
-// Amplify preBuild overwrites from env (see amplify.yml).
-// Local: set remote API URL and Cognito web auth settings.
-//
-// If the browser shows "Failed to fetch" while using a local server, either:
-//   (1) sam deploy (OPTIONS /roster CORS fix), or
-//   (2) set WEEKLY_SHARING_DEV_API_PROXY = true and run:
-//       python3 sam/scripts/dev_http_server.py
-//       (use PORT=8099 if 8080 is already taken: PORT=8099 python3 sam/scripts/dev_http_server.py)
+// Copy to web/api-config.js for local development.
+// Amplify preBuild overwrites web/api-config.js from environment variables.
 
 window.WEEKLY_SHARING_DEV_API_PROXY = false;
 
 (function () {
-  const remote = "https://aic25c4d4j.execute-api.ap-southeast-1.amazonaws.com";
+  const remote = "https://YOUR_API_ID.execute-api.ap-southeast-1.amazonaws.com";
   const useProxy =
     typeof window !== "undefined" &&
     window.WEEKLY_SHARING_DEV_API_PROXY === true &&
@@ -23,8 +17,8 @@ window.WEEKLY_SHARING_DEV_API_PROXY = false;
 
 /** Cognito config for custom auth modal (from SAM outputs / Amplify env). */
 window.WEEKLY_SHARING_COGNITO_DOMAIN =
-  "https://weekly-sharing-reminder-auth.auth.ap-southeast-1.amazoncognito.com";
-window.WEEKLY_SHARING_COGNITO_CLIENT_ID = "trsf0na0hai80l807u1tb5pve";
+  "https://YOUR_PREFIX.auth.ap-southeast-1.amazoncognito.com";
+window.WEEKLY_SHARING_COGNITO_CLIENT_ID = "YOUR_COGNITO_CLIENT_ID";
 window.WEEKLY_SHARING_COGNITO_REGION = "ap-southeast-1";
 
 /** Person on the first Wednesday (SERIES_START); schedule is A→Z then rotated so this name is week 0. */
