@@ -168,6 +168,22 @@ body.auth-locked .auth-gate {
   justify-content: flex-end;
 }
 
+.auth-guest-link {
+  margin-top: 0.55rem;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--fg-dim);
+  font-family: inherit;
+  font-size: 0.74rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.auth-guest-link:hover {
+  color: var(--fg);
+}
+
 .auth-gate [hidden] {
   display: none !important;
 }

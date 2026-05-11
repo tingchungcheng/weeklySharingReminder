@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = "weekly-sharing-auth-tokens";
+  const GUEST_KEY = "weekly-sharing-guest-mode";
   const SKEW_MS = 30_000;
 
   const logoutBtn = document.getElementById("auth-logout");
@@ -15,6 +16,7 @@
   const submitBtn = document.getElementById("auth-submit");
   const modeSignInBtn = document.getElementById("auth-mode-signin");
   const modeSignUpBtn = document.getElementById("auth-mode-signup");
+  const guestBtn = document.getElementById("auth-guest");
   const rosterEditBtn = document.getElementById("roster-edit-open");
   let mode = "signin";
   let signupAwaitingCode = false;
@@ -69,6 +71,15 @@
 
   function clearTokens() {
     localStorage.removeItem(STORAGE_KEY);
+  }
+
+  function getGuestMode() {
+    return localStorage.getItem(GUEST_KEY) === "1";
+  }
+
+  function setGuestMode(v) {
+    if (v) localStorage.setItem(GUEST_KEY, "1");
+    else localStorage.removeItem(GUEST_KEY);
   }
 
   function parseBoolLike(v) {
@@ -272,7 +283,7 @@
 
   function paintAuthUi(state) {
     if (logoutBtn) logoutBtn.hidden = !state.isAuthenticated;
-    setLocked(!state.isAuthenticated);
+    setLocked(!state.isAuthenticated && !getGuestMode());
 
     if (rosterEditBtn) {
       rosterEditBtn.hidden = false;
@@ -328,6 +339,7 @@
       try {
         if (mode === "signin") {
           await doSignIn();
+          setGuestMode(false);
           setStatus("", false);
           refresh();
         } else {
@@ -366,7 +378,15 @@
 
     logoutBtn?.addEventListener("click", () => {
       clearTokens();
+      setGuestMode(false);
       setMode("signin");
+      refresh();
+    });
+
+    guestBtn?.addEventListener("click", () => {
+      setGuestMode(true);
+      setStatus("", false);
+      showToast("Continuing as guest (read-only).", false);
       refresh();
     });
   }
