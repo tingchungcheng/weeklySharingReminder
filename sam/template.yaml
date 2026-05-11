@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Weekly sharing roster — HTTP API, Lambda, DynamoDB (SAM).
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: nodejs20.x
+    MemorySize: 128
+    Architectures:
+      - x86_64
+
+Resources:
+  WeeklySharingHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowMethods:
+          - GET
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+        AllowOrigins:
+          - "*"
+
+  RosterTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+
+  ListNamesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: index.handler
+      CodeUri: handlers/list-names/
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref RosterTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref RosterTable
+      Events:
+        GetNames:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WeeklySharingHttpApi
+            Path: /names
+            Method: GET
+
+Outputs:
+  HttpApiEndpoint:
+    Description: Base URL — use `${HttpApiEndpoint}/names` from the browser.
+    Value: !GetAtt WeeklySharingHttpApi.ApiEndpoint
+  HttpApiId:
+    Description: HTTP API ID
+    Value: !Ref WeeklySharingHttpApi
+  RosterTableName:
+    Description: DynamoDB table — seed pk=ROSTER (see sam/scripts/seed-roster.sh).
+    Value: !Ref RosterTable
+  ListNamesFunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt ListNamesFunction.Arn

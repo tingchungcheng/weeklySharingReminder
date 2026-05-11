@@ -45,6 +45,15 @@ body {
   margin: 0;
   font-size: 0.75rem;
   color: var(--fg-dim);
+  white-space: pre-line;
+}
+
+.subtitle--muted {
+  opacity: 0.85;
+}
+
+.subtitle--error {
+  color: var(--accent);
 }
 
 .list {

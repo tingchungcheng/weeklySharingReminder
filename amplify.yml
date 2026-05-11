@@ -1,0 +1,11 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - |
+          echo "window.WEEKLY_SHARING_API_BASE = \"${API_BASE_URL}\";" > web/api-config.js
+  artifacts:
+    baseDirectory: web
+    files:
+      - "**/*"

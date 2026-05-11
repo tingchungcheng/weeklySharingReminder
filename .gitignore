@@ -1,0 +1,9 @@
+.env
+.env.local
+.env.*.local
+!.env.example
+
+.aws-sam/
+
+# If you run npm install inside a Lambda folder locally
+sam/handlers/**/node_modules/
