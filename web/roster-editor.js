@@ -35,10 +35,40 @@
     return raw;
   }
 
-  function getEditKey() {
-    const k =
-      typeof window !== "undefined" ? window.WEEKLY_SHARING_EDIT_KEY : "";
-    return typeof k === "string" ? k.trim() : "";
+  function getAuthToken() {
+    const auth = typeof window !== "undefined" ? window.__weeklySharingAuth : null;
+    if (!auth) return "";
+    // custom:* attributes are typically present on ID token claims.
+    if (typeof auth.getIdToken === "function") {
+      const idt = auth.getIdToken();
+      if (typeof idt === "string" && idt.trim()) return idt.trim();
+    }
+    if (typeof auth.getAccessToken !== "function") return "";
+    const t = auth.getAccessToken();
+    return typeof t === "string" ? t.trim() : "";
+  }
+
+  function canEditRoster() {
+    const auth = typeof window !== "undefined" ? window.__weeklySharingAuth : null;
+    return !!(auth && auth.isAdmin);
+  }
+
+  function getAdminClaimForDebug() {
+    const auth = typeof window !== "undefined" ? window.__weeklySharingAuth : null;
+    if (!auth || typeof auth.getIdToken !== "function") return "";
+    const jwt = auth.getIdToken();
+    if (!jwt || typeof jwt !== "string") return "";
+    const parts = jwt.split(".");
+    if (parts.length < 2) return "";
+    try {
+      const p = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+      const pad = "=".repeat((4 - (p.length % 4 || 4)) % 4);
+      const raw = atob(p + pad);
+      const json = JSON.parse(raw);
+      return String(json["custom:admin"] ?? json.custom_admin ?? "");
+    } catch {
+      return "";
+    }
   }
 
   function sortNamesAlpha(names) {
@@ -154,6 +184,10 @@
   }
 
   function openDialog() {
+    if (!canEditRoster()) {
+      setStatus("Admin role required to edit roster. Login with an admin account.", true);
+      return;
+    }
     if (!dialog || typeof dialog.showModal !== "function") {
       alert("This browser does not support <dialog>.");
       return;
@@ -192,14 +226,14 @@
 
   async function onSave() {
     const apiBase = normalizeApiBase(window.WEEKLY_SHARING_API_BASE || "");
-    const key = getEditKey();
+    const token = getAuthToken();
     if (!apiBase) {
       setStatus("API base not configured.", true);
       return;
     }
-    if (!key) {
+    if (!token) {
       setStatus(
-        "Set WEEKLY_SHARING_EDIT_KEY in web/api-config.js (Amplify: EDIT_ROSTER_KEY) to match SAM EditRosterSecret.",
+        "Login required. Sign in with an admin account to save roster changes.",
         true
       );
       return;
@@ -225,11 +259,20 @@
         cache: "no-store",
         headers: {
           "Content-Type": "application/json",
-          "X-Edit-Key": key,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ names }),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 403) {
+        const adminClaim = getAdminClaimForDebug();
+        const suffix = adminClaim
+          ? ` (token custom:admin=${adminClaim})`
+          : " (token has no custom:admin claim)";
+        throw new Error(
+          `Admin role required${suffix}. If this should be admin, redeploy SAM so latest auth logic is live.`
+        );
+      }
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setStatus(`// saved ${data.count ?? names.length} names`, false);
       if (typeof window.__weeklySharingReloadSchedule === "function")
@@ -259,4 +302,27 @@
     dialog.classList.remove("reminder-modal--visible");
     dialog.setAttribute("aria-hidden", "true");
   });
+
+  window.addEventListener("weekly-sharing-auth-changed", () => {
+    const ok = canEditRoster();
+    if (openBtn) {
+      openBtn.hidden = false;
+      openBtn.disabled = !ok;
+      openBtn.setAttribute("aria-disabled", ok ? "false" : "true");
+      openBtn.title = ok
+        ? "Edit roster (DynamoDB)"
+        : "Admin only: custom:admin must be true";
+    }
+    if (!ok && dialog?.open) closeDialog();
+  });
+
+  if (openBtn) {
+    const ok = canEditRoster();
+    openBtn.hidden = false;
+    openBtn.disabled = !ok;
+    openBtn.setAttribute("aria-disabled", ok ? "false" : "true");
+    openBtn.title = ok
+      ? "Edit roster (DynamoDB)"
+      : "Admin only: custom:admin must be true";
+  }
 })();

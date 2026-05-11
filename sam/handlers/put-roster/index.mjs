@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 
@@ -23,7 +22,7 @@ function cors204() {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type,X-Edit-Key",
+      "Access-Control-Allow-Headers": "Content-Type,Authorization",
       "Access-Control-Max-Age": "86400",
     },
     body: "",
@@ -43,12 +42,30 @@ function sortNamesAlpha(names) {
   return out.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 }
 
-function keyOk(headerVal, secret) {
-  if (!secret || secret.length < 8) return false;
-  if (typeof headerVal !== "string" || !headerVal) return false;
-  const a = createHash("sha256").update(secret, "utf8").digest();
-  const b = createHash("sha256").update(headerVal, "utf8").digest();
-  return a.length === b.length && timingSafeEqual(a, b);
+function isAdminFromClaims(claims) {
+  if (!claims || typeof claims !== "object") return false;
+  const isTrueLike = (v) => {
+    const s = String(v ?? "").trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  };
+
+  // Primary: custom admin attribute.
+  if (isTrueLike(claims["custom:admin"])) return true;
+  if (isTrueLike(claims.custom_admin)) return true;
+
+  // Fallback: group-based admin.
+  const groupsRaw = claims["cognito:groups"];
+  if (groupsRaw) {
+    const groups = Array.isArray(groupsRaw)
+      ? groupsRaw
+      : String(groupsRaw)
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+    if (groups.some((g) => g.toLowerCase() === "admin")) return true;
+  }
+
+  return false;
 }
 
 export const handler = async (event) => {
@@ -58,19 +75,14 @@ export const handler = async (event) => {
   if (method !== "PUT") return json(405, { error: "Method not allowed" });
 
   const tableName = process.env.TABLE_NAME;
-  const secret = process.env.EDIT_ROSTER_SECRET || "";
   if (!tableName) {
     console.error("Missing TABLE_NAME");
     return json(500, { error: "Server misconfigured" });
   }
 
-  const rawHeaders = event.headers || {};
-  const headers = Object.fromEntries(
-    Object.entries(rawHeaders).map(([k, v]) => [String(k).toLowerCase(), v])
-  );
-  const editKey = headers["x-edit-key"] || headers["X-Edit-Key"] || "";
-  if (!keyOk(editKey, secret)) {
-    return json(401, { error: "Missing or invalid X-Edit-Key" });
+  const claims = event.requestContext?.authorizer?.jwt?.claims;
+  if (!isAdminFromClaims(claims)) {
+    return json(403, { error: "Admin role required" });
   }
 
   let body;

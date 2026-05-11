@@ -3,11 +3,18 @@ Transform: AWS::Serverless-2016-10-31
 Description: Weekly sharing roster — HTTP API, Lambda, DynamoDB (SAM).
 
 Parameters:
-  EditRosterSecret:
+  CognitoDomainPrefix:
     Type: String
-    Description: Secret for PUT /roster — browser sends header X-Edit-Key with this value. Use a long random string (min 8 chars).
-    Default: ""
-    NoEcho: true
+    Description: Unique prefix for Cognito Hosted UI domain.
+    Default: weekly-sharing-reminder-auth
+  AuthCallbackUrl:
+    Type: String
+    Description: Callback URL after login/signup (e.g. Amplify site URL or local http://localhost:8080/).
+    Default: http://localhost:8080/
+  AuthLogoutUrl:
+    Type: String
+    Description: Redirect URL after logout.
+    Default: http://localhost:8080/
 
 Globals:
   Function:
@@ -22,6 +29,70 @@ Resources:
   # was emitting OPTIONS 204 without Access-Control-* on /roster, breaking PUT preflight.
   WeeklySharingHttpApi:
     Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        Authorizers:
+          CognitoJwtAuthorizer:
+            IdentitySource: "$request.header.Authorization"
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${WeeklySharingUserPool}
+              audience:
+                - !Ref WeeklySharingUserPoolClient
+
+  WeeklySharingUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: weekly-sharing-reminder-users
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+
+  WeeklySharingUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref WeeklySharingUserPool
+      ClientName: weekly-sharing-reminder-web
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - implicit
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs:
+        - !Ref AuthCallbackUrl
+      LogoutURLs:
+        - !Ref AuthLogoutUrl
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  WeeklySharingUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref WeeklySharingUserPool
+
+  WeeklySharingAdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: admin
+      Description: Can edit the roster.
+      UserPoolId: !Ref WeeklySharingUserPool
 
   RosterTable:
     Type: AWS::DynamoDB::Table
@@ -67,7 +138,6 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref RosterTable
-          EDIT_ROSTER_SECRET: !Ref EditRosterSecret
       Policies:
         - DynamoDBWritePolicy:
             TableName: !Ref RosterTable
@@ -78,6 +148,8 @@ Resources:
             ApiId: !Ref WeeklySharingHttpApi
             Path: /roster
             Method: PUT
+            Auth:
+              Authorizer: CognitoJwtAuthorizer
         PutRosterOptions:
           Type: HttpApi
           Properties:
@@ -101,3 +173,15 @@ Outputs:
   PutRosterFunctionArn:
     Description: Lambda PUT /roster
     Value: !GetAtt PutRosterFunction.Arn
+  CognitoUserPoolId:
+    Description: Cognito user pool ID
+    Value: !Ref WeeklySharingUserPool
+  CognitoUserPoolClientId:
+    Description: Cognito app client ID for web auth
+    Value: !Ref WeeklySharingUserPoolClient
+  CognitoHostedUiDomain:
+    Description: Cognito hosted UI domain URL
+    Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+  CognitoAdminGroup:
+    Description: Group required for roster edit
+    Value: admin

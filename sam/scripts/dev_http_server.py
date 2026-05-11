@@ -58,7 +58,7 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
         self.send_header(
-            "Access-Control-Allow-Headers", "Content-Type, X-Edit-Key"
+            "Access-Control-Allow-Headers", "Content-Type, Authorization"
         )
         self.send_header("Access-Control-Max-Age", "86400")
         self.end_headers()
@@ -77,7 +77,7 @@ class DevHandler(http.server.SimpleHTTPRequestHandler):
             body = self.rfile.read(length)
 
         h = {}
-        for name in ("Content-Type", "X-Edit-Key"):
+        for name in ("Content-Type", "Authorization"):
             if name in self.headers:
                 h[name] = self.headers[name]
 

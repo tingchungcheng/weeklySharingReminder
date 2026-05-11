@@ -134,19 +134,19 @@ async function fetchAndBuildSchedule(apiBase) {
   ];
   if (anchorMissing)
     lines.unshift(
-      `// roster has no "${getSeriesAnchorName()}" — using A→Z order for dates (fix name or WEEKLY_SHARING_SERIES_ANCHOR_NAME)`
+      `// roster has no "${getSeriesAnchorName()}" — using A→Z order for dates (fix name or WEEKLY_SHARING_SERIES_ANCHOR_NAME)`,
     );
   setSubtitle(lines, anchorMissing ? "subtitle--error" : null);
 }
 
 async function init() {
   const apiBase = normalizeApiBase(
-    typeof window !== "undefined" ? window.WEEKLY_SHARING_API_BASE : ""
+    typeof window !== "undefined" ? window.WEEKLY_SHARING_API_BASE : "",
   );
 
   window.__weeklySharingReloadSchedule = async () => {
     const b = normalizeApiBase(
-      typeof window !== "undefined" ? window.WEEKLY_SHARING_API_BASE : ""
+      typeof window !== "undefined" ? window.WEEKLY_SHARING_API_BASE : "",
     );
     if (!b) return;
     setSubtitle(["// reloading roster…"], "subtitle--muted");
@@ -156,7 +156,7 @@ async function init() {
       console.error(e);
       setSubtitle(
         ["// reload failed", `// ${e.message || e}`],
-        "subtitle--error"
+        "subtitle--error",
       );
     }
   };
@@ -167,7 +167,7 @@ async function init() {
         "// data: DynamoDB via GET /names",
         "// set window.WEEKLY_SHARING_API_BASE in web/api-config.js (Amplify: env API_BASE_URL)",
       ],
-      "subtitle--error"
+      "subtitle--error",
     );
     return;
   }
@@ -180,7 +180,7 @@ async function init() {
         "//   python3 -m http.server 8080 --directory web",
         "// then open http://localhost:8080/  (api-config.js must list your API base URL)",
       ],
-      "subtitle--error"
+      "subtitle--error",
     );
     return;
   }
@@ -195,7 +195,7 @@ async function init() {
     const lines = ["// failed to load roster", `// ${msg}`];
     if (/failed to fetch/i.test(msg) || e instanceof TypeError) {
       lines.push(
-        "// often: file:// (use http server), CORS on PUT until sam deploy, or extension — see api-config WEEKLY_SHARING_DEV_API_PROXY + sam/scripts/dev_http_server.py"
+        "// often: file:// (use http server), CORS on PUT until sam deploy, or extension — see api-config WEEKLY_SHARING_DEV_API_PROXY + sam/scripts/dev_http_server.py",
       );
     }
     lines.push("// check api-config.js URL, Lambda, CORS, and DynamoDB seed");

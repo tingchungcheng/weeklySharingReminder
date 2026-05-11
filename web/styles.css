@@ -50,6 +50,163 @@ body {
   gap: 0.4rem;
 }
 
+.auth-btn {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: rgba(0, 200, 83, 0.06);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0.32rem 0.46rem;
+  cursor: pointer;
+}
+
+.auth-btn:hover {
+  border-color: var(--fg);
+  background: rgba(0, 200, 83, 0.14);
+}
+
+.auth-btn--active {
+  border-color: var(--fg);
+  background: rgba(0, 200, 83, 0.22);
+  box-shadow: 0 0 0 1px rgba(0, 200, 83, 0.45);
+}
+
+.auth-btn--secondary {
+  color: var(--accent);
+  border-color: rgba(255, 23, 68, 0.35);
+  background: rgba(255, 23, 68, 0.08);
+}
+
+body.auth-locked .shell {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+}
+
+body.auth-locked .auth-gate {
+  display: block;
+}
+
+.auth-gate__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.auth-gate__card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(94vw, 430px);
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.6);
+  padding: 1.15rem 1.25rem 1rem;
+}
+
+.auth-gate__title {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+}
+
+.auth-gate__hint {
+  margin: 0 0 0.9rem;
+  color: var(--fg-dim);
+  font-size: 0.72rem;
+}
+
+.auth-gate__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.auth-password-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.auth-password-row .reminder-form__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.auth-btn--hold {
+  flex-shrink: 0;
+  width: 2.05rem;
+  height: 2.05rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-btn__icon {
+  display: block;
+}
+
+.auth-btn--hold[aria-pressed="true"] {
+  border-color: var(--fg);
+  background: rgba(0, 200, 83, 0.2);
+}
+
+.auth-gate__switches {
+  margin-top: 0.7rem;
+  display: flex;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.auth-gate [hidden] {
+  display: none !important;
+}
+
+.toast-stack {
+  position: fixed;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  pointer-events: none;
+}
+
+.toast {
+  border: 1px solid var(--border);
+  background: rgba(0, 200, 83, 0.14);
+  color: var(--fg);
+  padding: 0.45rem 0.65rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.toast--error {
+  border-color: rgba(255, 23, 68, 0.45);
+  background: rgba(255, 23, 68, 0.14);
+  color: #ff6f8c;
+}
+
+.toast--out {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 .title {
   margin: 0;
   font-size: 1.1rem;
@@ -83,6 +240,14 @@ body {
 .reminder-open-btn:hover {
   border-color: var(--fg);
   background: rgba(0, 200, 83, 0.14);
+}
+
+.reminder-open-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  border-color: var(--border);
+  background: rgba(0, 200, 83, 0.04);
+  color: var(--fg-dim);
 }
 
 .reminder-open-btn:active {
@@ -308,6 +473,60 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
 .reminder-cal-btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.reminder-cal-btn--loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.loading-dots > span {
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+  animation: loading-dot-bounce 0.85s infinite ease-in-out;
+}
+
+.loading-dots > span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.loading-dots > span:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+@keyframes loading-dot-bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
 }
 
 .reminder-cal-btn--secondary {

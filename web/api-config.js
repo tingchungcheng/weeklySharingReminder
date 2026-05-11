@@ -1,5 +1,5 @@
 // Amplify preBuild overwrites from env (see amplify.yml).
-// Local: set remote API URL; EDIT key = SAM EditRosterSecret.
+// Local: set remote API URL and Cognito web auth settings.
 //
 // If the browser shows "Failed to fetch" while using a local server, either:
 //   (1) sam deploy (OPTIONS /roster CORS fix), or
@@ -21,8 +21,11 @@ window.WEEKLY_SHARING_DEV_API_PROXY = false;
     : remote;
 })();
 
-/** Same value as SAM `EditRosterSecret` — sent as X-Edit-Key on PUT /roster. */
-window.WEEKLY_SHARING_EDIT_KEY = "N3gKkaLbQvvWWywSliNoHKsNjb7ts5VZxNXLvIUq6qU=";
+/** Cognito config for custom auth modal (from SAM outputs / Amplify env). */
+window.WEEKLY_SHARING_COGNITO_DOMAIN =
+  "https://weekly-sharing-reminder-auth.auth.ap-southeast-1.amazoncognito.com";
+window.WEEKLY_SHARING_COGNITO_CLIENT_ID = "trsf0na0hai80l807u1tb5pve";
+window.WEEKLY_SHARING_COGNITO_REGION = "ap-southeast-1";
 
 /** Person on the first Wednesday (SERIES_START); schedule is A→Z then rotated so this name is week 0. */
 window.WEEKLY_SHARING_SERIES_ANCHOR_NAME = "Pang Yong Xian";
