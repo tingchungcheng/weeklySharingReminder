@@ -3,7 +3,7 @@
 version = 0.1
 
 [default.global.parameters]
-stack_name = "weekly-sharing-reminder-api"
+stack_name = "weekly-sharing-reminder-api-v2"
 template_file = "sam/template.yaml"
 
 [default.build.parameters]
@@ -15,6 +15,6 @@ capabilities = "CAPABILITY_IAM"
 resolve_s3 = true
 region = "ap-southeast-1"
 confirm_changeset = true
-s3_prefix = "weekly-sharing-reminder-api"
+s3_prefix = "weekly-sharing-reminder-api-v2"
 profile = "tingcccc-admin"
 image_repositories = []

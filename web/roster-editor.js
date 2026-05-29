@@ -5,12 +5,53 @@
     ? dialog.querySelectorAll("[data-roster-edit-close]")
     : [];
   const listEl = document.getElementById("roster-edit-list");
+  const holidayListEl = document.getElementById("roster-edit-holiday-list");
+  const holidayDateInput = document.getElementById("roster-edit-holiday-date");
+  const holidayAddBtn = document.getElementById("roster-edit-holiday-add");
   const newInput = document.getElementById("roster-edit-new-name");
   const addBtn = document.getElementById("roster-edit-add");
   const saveBtn = document.getElementById("roster-edit-save");
   const statusEl = document.getElementById("roster-edit-status");
 
   let workingNames = [];
+  let workingHolidays = [];
+
+  function normalizeHolidayIsos(raw) {
+    const seen = new Set();
+    const out = [];
+    for (const h of raw || []) {
+      if (typeof h !== "string") continue;
+      const t = h.trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+    }
+    return out.sort();
+  }
+
+  function parseIsoLocal(iso) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+    if (!m) return null;
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  function formatHolidayLabel(iso) {
+    const d = parseIsoLocal(iso);
+    if (!d) return iso;
+    return d.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  function isWednesdayIso(iso) {
+    const d = parseIsoLocal(iso);
+    return d && d.getDay() === 3;
+  }
 
   function normalizeApiBase(raw) {
     if (typeof raw !== "string") return "";
@@ -143,12 +184,42 @@
     }
   }
 
+  function renderHolidayList() {
+    if (!holidayListEl) return;
+    workingHolidays = normalizeHolidayIsos(workingHolidays);
+    holidayListEl.innerHTML = "";
+    if (workingHolidays.length === 0) {
+      const li = document.createElement("li");
+      li.className = "roster-edit-holiday-row roster-edit-holiday-row--empty";
+      li.textContent = "// no holidays";
+      holidayListEl.appendChild(li);
+      return;
+    }
+    workingHolidays.forEach((iso) => {
+      const li = document.createElement("li");
+      li.className = "roster-edit-holiday-row";
+      li.innerHTML = `<span class="roster-edit-holiday-row__date"></span><button type="button" class="roster-edit-holiday-row__del" data-iso="${iso}" aria-label="Remove holiday">×</button>`;
+      li.querySelector(".roster-edit-holiday-row__date").textContent =
+        formatHolidayLabel(iso);
+      li.querySelector(".roster-edit-holiday-row__del").addEventListener(
+        "click",
+        () => {
+          workingHolidays = workingHolidays.filter((h) => h !== iso);
+          renderHolidayList();
+          setStatus("", false);
+        }
+      );
+      holidayListEl.appendChild(li);
+    });
+  }
+
   async function loadRosterIntoEditor() {
     const apiBase = normalizeApiBase(window.WEEKLY_SHARING_API_BASE || "");
     if (!apiBase) {
       setStatus("Configure WEEKLY_SHARING_API_BASE first.", true);
       workingNames = [];
       renderList();
+      renderHolidayList();
       return;
     }
     if (isFileProtocolPage()) {
@@ -157,7 +228,9 @@
         true
       );
       workingNames = [];
+      workingHolidays = [];
       renderList();
+      renderHolidayList();
       return;
     }
 
@@ -170,16 +243,25 @@
         ? data.names.filter((n) => typeof n === "string").map((s) => s.trim())
         : [];
       workingNames = sortNamesAlpha(workingNames);
+      workingHolidays = normalizeHolidayIsos(
+        Array.isArray(data.holidays) ? data.holidays : []
+      );
       renderList();
+      renderHolidayList();
+      const hol = workingHolidays.length;
       setStatus(
-        "// names sorted A→Z in storage; on the main page, dates rotate from the series anchor on 6 May.",
+        hol > 0
+          ? `// ${hol} holiday(s) skip Wednesdays; later dates shift forward.`
+          : "// names sorted A→Z; add holidays to skip a sharing Wednesday.",
         false
       );
     } catch (e) {
       console.error(e);
       setStatus(explainFetchFailure(e), true);
       workingNames = [];
+      workingHolidays = [];
       renderList();
+      renderHolidayList();
     }
   }
 
@@ -224,6 +306,30 @@
     setStatus("", false);
   }
 
+  function onAddHoliday() {
+    const iso = (holidayDateInput?.value || "").trim();
+    if (!iso) {
+      setStatus("// pick a date for the holiday", true);
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+      setStatus("// invalid date", true);
+      return;
+    }
+    if (!isWednesdayIso(iso)) {
+      setStatus("// holiday must be a Wednesday (sharing day)", true);
+      return;
+    }
+    if (workingHolidays.includes(iso)) {
+      setStatus("// that Wednesday is already a holiday", true);
+      return;
+    }
+    workingHolidays.push(iso);
+    if (holidayDateInput) holidayDateInput.value = "";
+    renderHolidayList();
+    setStatus("", false);
+  }
+
   async function onSave() {
     const apiBase = normalizeApiBase(window.WEEKLY_SHARING_API_BASE || "");
     const token = getAuthToken();
@@ -246,6 +352,7 @@
       return;
     }
     const names = sortNamesAlpha(workingNames);
+    const holidays = normalizeHolidayIsos(workingHolidays);
     if (names.length === 0) {
       setStatus("Add at least one name before saving.", true);
       return;
@@ -261,7 +368,7 @@
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ names }),
+        body: JSON.stringify({ names, holidays }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 403) {
@@ -274,7 +381,11 @@
         );
       }
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      setStatus(`// saved ${data.count ?? names.length} names`, false);
+      const hol = data.holidayCount ?? holidays.length;
+      setStatus(
+        `// saved ${data.count ?? names.length} names, ${hol} holiday(s)`,
+        false
+      );
       if (typeof window.__weeklySharingReloadSchedule === "function")
         await window.__weeklySharingReloadSchedule();
       window.setTimeout(closeDialog, 600);
@@ -289,10 +400,17 @@
   openBtn?.addEventListener("click", openDialog);
   closeEls.forEach((el) => el.addEventListener("click", closeDialog));
   addBtn?.addEventListener("click", onAdd);
+  holidayAddBtn?.addEventListener("click", onAddHoliday);
   newInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       onAdd();
+    }
+  });
+  holidayDateInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onAddHoliday();
     }
   });
   saveBtn?.addEventListener("click", onSave);

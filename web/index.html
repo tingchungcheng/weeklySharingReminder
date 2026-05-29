@@ -286,8 +286,8 @@
         </header>
         <p class="reminder-modal__hint">
           // Names are saved in English alphabetical order; that order maps to
-          Wednesdays from the series start. Adding “Peggie” inserts after “Pang
-          Yong Xian” and shifts later weeks.
+          Wednesdays from the series start. Holidays skip a sharing Wednesday
+          and push everyone after that date forward one week.
         </p>
         <div class="roster-edit-addrow">
           <input
@@ -307,6 +307,34 @@
           id="roster-edit-list"
           aria-label="Current names"
         ></ol>
+        <section class="roster-edit-holidays" aria-labelledby="roster-edit-holidays-title">
+          <h3 class="roster-edit-holidays__title" id="roster-edit-holidays-title">
+            holidays
+          </h3>
+          <p class="roster-edit-holidays__hint">
+            // Pick a Wednesday to skip (no sharing that week).
+          </p>
+          <div class="roster-edit-addrow">
+            <input
+              id="roster-edit-holiday-date"
+              type="date"
+              class="reminder-form__input"
+              aria-label="Holiday Wednesday to skip"
+            />
+            <button
+              type="button"
+              class="reminder-cal-btn reminder-cal-btn--secondary"
+              id="roster-edit-holiday-add"
+            >
+              add_holiday
+            </button>
+          </div>
+          <ul
+            class="roster-edit-holiday-list"
+            id="roster-edit-holiday-list"
+            aria-label="Scheduled holidays"
+          ></ul>
+        </section>
         <p
           id="roster-edit-status"
           class="reminder-form__status"

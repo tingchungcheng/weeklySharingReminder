@@ -42,6 +42,20 @@ function sortNamesAlpha(names) {
   return out.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 }
 
+/** ISO YYYY-MM-DD, unique, ascending. */
+function normalizeHolidays(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const h of raw) {
+    if (typeof h !== "string") continue;
+    const t = h.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out.sort();
+}
+
 export const handler = async (event) => {
   const method = event.requestContext?.http?.method || event.httpMethod;
   if (method === "OPTIONS") return cors204();
@@ -64,8 +78,11 @@ export const handler = async (event) => {
       ? result.Item.names.filter((n) => typeof n === "string")
       : [];
     const names = sortNamesAlpha(raw);
+    const holidays = normalizeHolidays(
+      Array.isArray(result.Item?.holidays) ? result.Item.holidays : []
+    );
 
-    return json(200, { names });
+    return json(200, { names, holidays });
   } catch (err) {
     console.error(err);
     return json(500, { error: "Failed to load roster" });

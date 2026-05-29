@@ -1,11 +1,11 @@
 version = 0.1
 [default.deploy.parameters]
-stack_name = "weekly-sharing-reminder-api"
+stack_name = "weekly-sharing-reminder-api-v2"
 resolve_s3 = true
-s3_prefix = "weekly-sharing-reminder-api"
+s3_prefix = "weekly-sharing-reminder-api-v2"
 region = "ap-southeast-1"
 profile = "tingcccc-admin"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "CognitoDomainPrefix=\"weekly-sharing-reminder-auth\" AuthCallbackUrl=\"http://localhost:8080/\" AuthLogoutUrl=\"http://localhost:8080/\""
+parameter_overrides = "CognitoDomainPrefix=\"weekly-sharing-reminder-auth-v2\" AuthCallbackUrl=\"http://localhost:8080/\" AuthLogoutUrl=\"http://localhost:8080/\""
 image_repositories = []

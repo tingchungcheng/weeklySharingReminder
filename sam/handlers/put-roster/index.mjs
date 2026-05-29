@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 const doc = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ROSTER_PK = "ROSTER";
 const MAX_NAMES = 200;
+const MAX_HOLIDAYS = 100;
 
 function json(statusCode, body) {
   return {
@@ -40,6 +41,20 @@ function sortNamesAlpha(names) {
     out.push(t);
   }
   return out.sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+}
+
+/** ISO YYYY-MM-DD, unique, ascending. */
+function normalizeHolidays(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const h of raw) {
+    if (typeof h !== "string") continue;
+    const t = h.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out.sort();
 }
 
 function isAdminFromClaims(claims) {
@@ -100,14 +115,24 @@ export const handler = async (event) => {
   if (names.length > MAX_NAMES)
     return json(400, { error: `At most ${MAX_NAMES} names` });
 
+  const holidays = Array.isArray(body.holidays)
+    ? normalizeHolidays(body.holidays)
+    : [];
+  if (holidays.length > MAX_HOLIDAYS)
+    return json(400, { error: `At most ${MAX_HOLIDAYS} holidays` });
+
   try {
     await doc.send(
       new PutCommand({
         TableName: tableName,
-        Item: { pk: ROSTER_PK, names },
+        Item: { pk: ROSTER_PK, names, holidays },
       })
     );
-    return json(200, { ok: true, count: names.length });
+    return json(200, {
+      ok: true,
+      count: names.length,
+      holidayCount: holidays.length,
+    });
   } catch (err) {
     console.error(err);
     return json(500, { error: "Failed to save roster" });

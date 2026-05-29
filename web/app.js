@@ -69,28 +69,68 @@ function setSubtitle(lines, modifierClass) {
   if (modifierClass) el.classList.add(modifierClass);
 }
 
-async function fetchNames(apiBase) {
+async function fetchRoster(apiBase) {
   const url = `${apiBase}/names`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
   if (!data || !Array.isArray(data.names))
     throw new Error("Unexpected response shape");
-  return data.names
+  const names = data.names
     .filter((n) => typeof n === "string")
     .map((s) => s.trim())
     .filter(Boolean);
+  const holidays = normalizeHolidayIsos(
+    Array.isArray(data.holidays) ? data.holidays : []
+  );
+  return { names, holidays };
 }
 
-function buildSchedule(names) {
+function toIsoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function normalizeHolidayIsos(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const h of raw || []) {
+    if (typeof h !== "string") continue;
+    const t = h.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t) || seen.has(t)) continue;
+    seen.add(t);
+    out.push(t);
+  }
+  return out.sort();
+}
+
+/** Consecutive Wednesdays from series start, skipping holiday ISO dates. */
+function sharingWednesdays(count, holidayIsos) {
+  const holidaySet = new Set(normalizeHolidayIsos(holidayIsos));
+  const slots = [];
+  let week = 0;
+  const maxWeeks = count + holidaySet.size + 520;
+  while (slots.length < count && week < maxWeeks) {
+    const d = addWeeks(SERIES_START, week);
+    const iso = toIsoDate(startOfLocalDay(d));
+    if (!holidaySet.has(iso)) slots.push(d);
+    week += 1;
+  }
+  return slots;
+}
+
+function buildSchedule(names, holidayIsos) {
   const sorted = sortNamesAlpha(names);
   const anchor = getSeriesAnchorName();
   const { ordered, anchorMissing } = orderNamesForWednesdays(sorted, anchor);
+  const dates = sharingWednesdays(ordered.length, holidayIsos);
   const today = startOfLocalDay(new Date());
   const rows = ordered.map((name, i) => ({
     no: i + 1,
     name,
-    date: addWeeks(SERIES_START, i),
+    date: dates[i] || addWeeks(SERIES_START, i),
   }));
 
   const futureOrToday = rows
@@ -123,15 +163,19 @@ function buildSchedule(names) {
 }
 
 async function fetchAndBuildSchedule(apiBase) {
-  const names = await fetchNames(apiBase);
+  const { names, holidays } = await fetchRoster(apiBase);
   if (names.length === 0)
     throw new Error("Empty names list — seed DynamoDB pk=ROSTER");
-  const { anchorMissing } = buildSchedule(names);
+  const { anchorMissing } = buildSchedule(names, holidays);
   const n = sortNamesAlpha(names).length;
   const lines = [
     "// next slot highlighted — Wednesdays follow roster A→Z, rotated so week 0 = series anchor",
     `// anchor: ${getSeriesAnchorName()} on ${formatRowDate(SERIES_START)} — ${n} names`,
   ];
+  if (holidays.length > 0)
+    lines.push(
+      `// ${holidays.length} holiday(s) skip sharing — roster dates pushed forward`
+    );
   if (anchorMissing)
     lines.unshift(
       `// roster has no "${getSeriesAnchorName()}" — using A→Z order for dates (fix name or WEEKLY_SHARING_SERIES_ANCHOR_NAME)`,

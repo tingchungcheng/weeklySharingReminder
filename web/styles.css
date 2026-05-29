@@ -560,7 +560,7 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
 
 .roster-edit-modal__dialog {
   max-width: 440px;
-  max-height: min(92vh, 640px);
+  max-height: min(92vh, 720px);
 }
 
 .roster-edit-addrow {
@@ -585,7 +585,7 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
   margin: 0 0 0.75rem;
   padding: 0;
   list-style: none;
-  max-height: min(48vh, 320px);
+  max-height: min(36vh, 240px);
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 2px;
@@ -657,6 +657,73 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
 }
 
 .roster-edit-row__del:hover {
+  background: rgba(255, 23, 68, 0.18);
+}
+
+.roster-edit-holidays {
+  margin: 0 0 0.75rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--border);
+}
+
+.roster-edit-holidays__title {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--fg);
+  text-transform: lowercase;
+}
+
+.roster-edit-holidays__hint {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+}
+
+.roster-edit-holiday-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: min(20vh, 140px);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(255, 193, 7, 0.04);
+}
+
+.roster-edit-holiday-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.4rem 0.55rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+}
+
+.roster-edit-holiday-row:last-child {
+  border-bottom: none;
+}
+
+.roster-edit-holiday-row__date {
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+.roster-edit-holiday-row__del {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(255, 23, 68, 0.08);
+  color: var(--accent);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.roster-edit-holiday-row__del:hover {
   background: rgba(255, 23, 68, 0.18);
 }
 
