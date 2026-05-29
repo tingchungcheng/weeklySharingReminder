@@ -70,7 +70,7 @@ function setSubtitle(lines, modifierClass) {
 }
 
 async function fetchRoster(apiBase) {
-  const url = `${apiBase}/names`;
+  const url = `${apiBase}/names?_=${Date.now()}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -162,6 +162,17 @@ function buildSchedule(names, holidayIsos) {
   return { anchorMissing };
 }
 
+function formatFetchedAt() {
+  const d = new Date();
+  return d.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 async function fetchAndBuildSchedule(apiBase) {
   const { names, holidays } = await fetchRoster(apiBase);
   if (names.length === 0)
@@ -169,6 +180,7 @@ async function fetchAndBuildSchedule(apiBase) {
   const { anchorMissing } = buildSchedule(names, holidays);
   const n = sortNamesAlpha(names).length;
   const lines = [
+    `// loaded ${formatFetchedAt()} — refresh or refocus tab to pull latest`,
     "// next slot highlighted — Wednesdays follow roster A→Z, rotated so week 0 = series anchor",
     `// anchor: ${getSeriesAnchorName()} on ${formatRowDate(SERIES_START)} — ${n} names`,
   ];
@@ -245,6 +257,29 @@ async function init() {
     lines.push("// check api-config.js URL, Lambda, CORS, and DynamoDB seed");
     setSubtitle(lines, "subtitle--error");
   }
+
+  const refreshBtn = document.getElementById("roster-refresh");
+  refreshBtn?.addEventListener("click", () => {
+    if (typeof window.__weeklySharingReloadSchedule === "function") {
+      refreshBtn.disabled = true;
+      window
+        .__weeklySharingReloadSchedule()
+        .finally(() => {
+          refreshBtn.disabled = false;
+        });
+    }
+  });
+
+  let lastVisibilityFetch = 0;
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    const now = Date.now();
+    if (now - lastVisibilityFetch < 3000) return;
+    lastVisibilityFetch = now;
+    if (typeof window.__weeklySharingReloadSchedule === "function") {
+      window.__weeklySharingReloadSchedule().catch(() => {});
+    }
+  });
 }
 
 init();

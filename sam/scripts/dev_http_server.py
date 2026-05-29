@@ -25,7 +25,7 @@ WEB_ROOT = os.path.join(REPO_ROOT, "web")
 
 API_TARGET = os.environ.get(
     "WEEKLY_SHARING_API_PROXY_TARGET",
-    "https://aic25c4d4j.execute-api.ap-southeast-1.amazonaws.com",
+    "https://30ig7if1za.execute-api.ap-southeast-1.amazonaws.com",
 ).rstrip("/")
 
 PORT = int(os.environ.get("PORT", "8080"))

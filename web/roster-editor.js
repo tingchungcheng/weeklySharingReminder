@@ -236,7 +236,9 @@
 
     setStatus("// loading…", false);
     try {
-      const res = await fetch(`${apiBase}/names`, { cache: "no-store" });
+      const res = await fetch(`${apiBase}/names?_=${Date.now()}`, {
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       workingNames = Array.isArray(data.names)

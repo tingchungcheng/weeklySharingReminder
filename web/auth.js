@@ -1,6 +1,7 @@
 (function () {
   const STORAGE_KEY = "weekly-sharing-auth-tokens";
   const GUEST_KEY = "weekly-sharing-guest-mode";
+  const GUEST_KEY_LEGACY = "weekly-sharing-guest-mode"; // was in localStorage
   const SKEW_MS = 30_000;
 
   const logoutBtn = document.getElementById("auth-logout");
@@ -74,12 +75,28 @@
   }
 
   function getGuestMode() {
-    return localStorage.getItem(GUEST_KEY) === "1";
+    try {
+      if (sessionStorage.getItem(GUEST_KEY) === "1") return true;
+      // One-time migration from older localStorage guest flag.
+      if (localStorage.getItem(GUEST_KEY_LEGACY) === "1") {
+        sessionStorage.setItem(GUEST_KEY, "1");
+        localStorage.removeItem(GUEST_KEY_LEGACY);
+        return true;
+      }
+    } catch {
+      /* private mode */
+    }
+    return false;
   }
 
   function setGuestMode(v) {
-    if (v) localStorage.setItem(GUEST_KEY, "1");
-    else localStorage.removeItem(GUEST_KEY);
+    try {
+      if (v) sessionStorage.setItem(GUEST_KEY, "1");
+      else sessionStorage.removeItem(GUEST_KEY);
+      localStorage.removeItem(GUEST_KEY_LEGACY);
+    } catch {
+      /* ignore */
+    }
   }
 
   function parseBoolLike(v) {
@@ -250,6 +267,9 @@
       refreshToken: result.RefreshToken || "",
     });
     showToast("Login successful.", false);
+    if (typeof window.__weeklySharingReloadSchedule === "function") {
+      window.__weeklySharingReloadSchedule().catch(() => {});
+    }
   }
 
   async function doSignUp() {
@@ -381,6 +401,9 @@
       setGuestMode(false);
       setMode("signin");
       refresh();
+      if (typeof window.__weeklySharingReloadSchedule === "function") {
+        window.__weeklySharingReloadSchedule().catch(() => {});
+      }
     });
 
     guestBtn?.addEventListener("click", () => {
@@ -388,6 +411,9 @@
       setStatus("", false);
       showToast("Continuing as guest (read-only).", false);
       refresh();
+      if (typeof window.__weeklySharingReloadSchedule === "function") {
+        window.__weeklySharingReloadSchedule().catch(() => {});
+      }
     });
   }
 
