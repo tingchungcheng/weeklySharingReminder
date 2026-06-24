@@ -83,7 +83,59 @@ async function fetchRoster(apiBase) {
   const holidays = normalizeHolidayIsos(
     Array.isArray(data.holidays) ? data.holidays : []
   );
-  return { names, holidays };
+  const swaps = normalizeSwaps(Array.isArray(data.swaps) ? data.swaps : []);
+  return { names, holidays, swaps };
+}
+
+function normalizeSwaps(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const item of raw || []) {
+    if (!item || typeof item !== "object") continue;
+    let a = typeof item.dateA === "string" ? item.dateA.trim() : "";
+    let b = typeof item.dateB === "string" ? item.dateB.trim() : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(b)) continue;
+    if (a === b) continue;
+    if (a > b) [a, b] = [b, a];
+    const key = `${a}|${b}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ dateA: a, dateB: b });
+  }
+  return out.sort((x, y) => x.dateA.localeCompare(y.dateA));
+}
+
+function rowIsoDate(row) {
+  return toIsoDate(startOfLocalDay(row.date));
+}
+
+/** Swap names on two Wednesdays; roster No stays the same. */
+function applySwapsToRows(rows, swaps) {
+  const out = rows.map((r) => ({ ...r }));
+  for (const swap of normalizeSwaps(swaps)) {
+    const iA = out.findIndex((r) => rowIsoDate(r) === swap.dateA);
+    const iB = out.findIndex((r) => rowIsoDate(r) === swap.dateB);
+    if (iA < 0 || iB < 0 || iA === iB) continue;
+    const nameA = out[iA].name;
+    out[iA].name = out[iB].name;
+    out[iB].name = nameA;
+    out[iA].swapped = true;
+    out[iB].swapped = true;
+  }
+  return out;
+}
+
+function buildBaseScheduleRows(names, holidayIsos) {
+  const sorted = sortNamesAlpha(names);
+  const anchor = getSeriesAnchorName();
+  const { ordered, anchorMissing } = orderNamesForWednesdays(sorted, anchor);
+  const dates = sharingWednesdays(ordered.length, holidayIsos);
+  const rows = ordered.map((name, i) => ({
+    no: i + 1,
+    name,
+    date: dates[i] || addWeeks(SERIES_START, i),
+  }));
+  return { rows, anchorMissing };
 }
 
 function toIsoDate(d) {
@@ -121,17 +173,13 @@ function sharingWednesdays(count, holidayIsos) {
   return slots;
 }
 
-function buildSchedule(names, holidayIsos) {
-  const sorted = sortNamesAlpha(names);
-  const anchor = getSeriesAnchorName();
-  const { ordered, anchorMissing } = orderNamesForWednesdays(sorted, anchor);
-  const dates = sharingWednesdays(ordered.length, holidayIsos);
+function buildSchedule(names, holidayIsos, swaps) {
+  const { rows: baseRows, anchorMissing } = buildBaseScheduleRows(
+    names,
+    holidayIsos
+  );
+  const rows = applySwapsToRows(baseRows, swaps);
   const today = startOfLocalDay(new Date());
-  const rows = ordered.map((name, i) => ({
-    no: i + 1,
-    name,
-    date: dates[i] || addWeeks(SERIES_START, i),
-  }));
 
   const futureOrToday = rows
     .map((r) => startOfLocalDay(r.date))
@@ -152,6 +200,7 @@ function buildSchedule(names, holidayIsos) {
       li.classList.add("row--next");
       li.setAttribute("aria-current", "date");
     }
+    if (r.swapped) li.classList.add("row--swapped");
     li.innerHTML = `<span class="row__no">${r.no}</span><span class="row__date">${formatRowDate(r.date)}</span><span class="row__name">${escapeHtml(r.name)}</span>`;
     ul.appendChild(li);
   }
@@ -174,10 +223,10 @@ function formatFetchedAt() {
 }
 
 async function fetchAndBuildSchedule(apiBase) {
-  const { names, holidays } = await fetchRoster(apiBase);
+  const { names, holidays, swaps } = await fetchRoster(apiBase);
   if (names.length === 0)
     throw new Error("Empty names list — seed DynamoDB pk=ROSTER");
-  const { anchorMissing } = buildSchedule(names, holidays);
+  const { anchorMissing } = buildSchedule(names, holidays, swaps);
   const n = sortNamesAlpha(names).length;
   const lines = [
     `// loaded ${formatFetchedAt()} — refresh or refocus tab to pull latest`,
@@ -187,6 +236,10 @@ async function fetchAndBuildSchedule(apiBase) {
   if (holidays.length > 0)
     lines.push(
       `// ${holidays.length} holiday(s) skip sharing — roster dates pushed forward`
+    );
+  if (swaps.length > 0)
+    lines.push(
+      `// ${swaps.length} one-time swap(s) — names exchange on those dates only`
     );
   if (anchorMissing)
     lines.unshift(
@@ -281,5 +334,15 @@ async function init() {
     }
   });
 }
+
+window.__weeklySharingScheduleCore = {
+  buildBaseScheduleRows,
+  applySwapsToRows,
+  normalizeSwaps,
+  normalizeHolidayIsos,
+  formatRowDate,
+  toIsoDate,
+  startOfLocalDay,
+};
 
 init();

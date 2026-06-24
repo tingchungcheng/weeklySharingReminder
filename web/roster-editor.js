@@ -15,6 +15,7 @@
 
   let workingNames = [];
   let workingHolidays = [];
+  let workingSwaps = [];
 
   function normalizeHolidayIsos(raw) {
     const seen = new Set();
@@ -259,6 +260,7 @@
       workingHolidays = normalizeHolidayIsos(
         Array.isArray(data.holidays) ? data.holidays : [],
       );
+      workingSwaps = Array.isArray(data.swaps) ? data.swaps : [];
       renderList();
       renderHolidayList();
       const hol = workingHolidays.length;
@@ -371,6 +373,7 @@
     }
     const names = sortNamesAlpha(workingNames);
     const holidays = normalizeHolidayIsos(workingHolidays);
+    const swaps = workingSwaps;
     if (names.length === 0) {
       setStatus("Add at least one name before saving.", true);
       return;
@@ -386,7 +389,7 @@
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ names, holidays }),
+        body: JSON.stringify({ names, holidays, swaps }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 403) {

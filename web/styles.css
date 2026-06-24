@@ -780,6 +780,33 @@ dialog.reminder-modal.reminder-modal--visible .reminder-modal__dialog {
   background: rgba(255, 23, 68, 0.06);
 }
 
+.row--swapped .row__name {
+  color: #ffc107;
+}
+
+.swap-edit-pickrow {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.swap-edit-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.swap-edit-pick__label {
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+  text-transform: lowercase;
+}
+
+.swap-edit-select {
+  width: 100%;
+  min-width: 0;
+}
+
 .row__no {
   position: absolute;
   left: -2.15rem;

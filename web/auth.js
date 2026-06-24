@@ -19,6 +19,7 @@
   const modeSignUpBtn = document.getElementById("auth-mode-signup");
   const guestBtn = document.getElementById("auth-guest");
   const rosterEditBtn = document.getElementById("roster-edit-open");
+  const swapEditBtn = document.getElementById("swap-edit-open");
   let mode = "signin";
   let signupAwaitingCode = false;
   let awaitingNewPassword = false;
@@ -378,6 +379,14 @@
       rosterEditBtn.title = state.isAdmin
         ? "Edit roster (DynamoDB)"
         : "Admin only: set custom:admin=true to enable";
+    }
+    if (swapEditBtn) {
+      swapEditBtn.hidden = false;
+      swapEditBtn.disabled = !state.isAdmin;
+      swapEditBtn.setAttribute("aria-disabled", state.isAdmin ? "false" : "true");
+      swapEditBtn.title = state.isAdmin
+        ? "Swap two sharing slots once"
+        : "Admin only: custom:admin must be true";
     }
   }
 

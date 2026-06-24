@@ -1,10 +1,11 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 
 const doc = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const ROSTER_PK = "ROSTER";
 const MAX_NAMES = 200;
 const MAX_HOLIDAYS = 100;
+const MAX_SWAPS = 50;
 
 function json(statusCode, body) {
   return {
@@ -55,6 +56,25 @@ function normalizeHolidays(raw) {
     out.push(t);
   }
   return out.sort();
+}
+
+/** One-time name swap between two sharing Wednesdays { dateA, dateB }. */
+function normalizeSwaps(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const item of raw || []) {
+    if (!item || typeof item !== "object") continue;
+    let a = typeof item.dateA === "string" ? item.dateA.trim() : "";
+    let b = typeof item.dateB === "string" ? item.dateB.trim() : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(b)) continue;
+    if (a === b) continue;
+    if (a > b) [a, b] = [b, a];
+    const key = `${a}|${b}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ dateA: a, dateB: b });
+  }
+  return out.sort((x, y) => x.dateA.localeCompare(y.dateA));
 }
 
 function isAdminFromClaims(claims) {
@@ -121,17 +141,35 @@ export const handler = async (event) => {
   if (holidays.length > MAX_HOLIDAYS)
     return json(400, { error: `At most ${MAX_HOLIDAYS} holidays` });
 
+  let swaps;
+  if (Array.isArray(body.swaps)) {
+    swaps = normalizeSwaps(body.swaps);
+  } else {
+    const existing = await doc.send(
+      new GetCommand({
+        TableName: tableName,
+        Key: { pk: ROSTER_PK },
+      })
+    );
+    swaps = normalizeSwaps(
+      Array.isArray(existing.Item?.swaps) ? existing.Item.swaps : []
+    );
+  }
+  if (swaps.length > MAX_SWAPS)
+    return json(400, { error: `At most ${MAX_SWAPS} swaps` });
+
   try {
     await doc.send(
       new PutCommand({
         TableName: tableName,
-        Item: { pk: ROSTER_PK, names, holidays },
+        Item: { pk: ROSTER_PK, names, holidays, swaps },
       })
     );
     return json(200, {
       ok: true,
       count: names.length,
       holidayCount: holidays.length,
+      swapCount: swaps.length,
     });
   } catch (err) {
     console.error(err);

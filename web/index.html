@@ -77,6 +77,29 @@
             <button
               type="button"
               class="reminder-open-btn"
+              id="swap-edit-open"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="swap-edit-modal"
+              title="Swap two sharing slots once"
+              hidden
+            >
+              <svg
+                class="reminder-open-btn__icon"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  fill="currentColor"
+                  d="M16 17.01V10h-2v7.01h-3L15 21l4-3.99h-3zM9 3L5 6.99h3V14h2V6.99h3L9 3z"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="reminder-open-btn"
               id="roster-edit-open"
               aria-haspopup="dialog"
               aria-expanded="false"
@@ -376,10 +399,94 @@
       </div>
     </dialog>
 
+    <dialog
+      id="swap-edit-modal"
+      class="reminder-modal roster-edit-modal"
+      aria-labelledby="swap-edit-title"
+      aria-modal="true"
+      aria-hidden="true"
+    >
+      <div
+        class="reminder-modal__backdrop"
+        data-swap-edit-close
+        tabindex="-1"
+      ></div>
+      <div class="reminder-modal__dialog roster-edit-modal__dialog">
+        <header class="reminder-modal__head">
+          <h2 class="reminder-modal__title" id="swap-edit-title">
+            swap_slots
+          </h2>
+          <button
+            type="button"
+            class="reminder-modal__close"
+            data-swap-edit-close
+            aria-label="Close swap editor"
+          >
+            ×
+          </button>
+        </header>
+        <p class="reminder-modal__hint">
+          // Exchange who shares on two Wednesdays (by roster No). Applies once
+          for this cycle — the next time around, normal order returns.
+        </p>
+        <div class="swap-edit-pickrow">
+          <label class="swap-edit-pick">
+            <span class="swap-edit-pick__label">slot A</span>
+            <select
+              id="swap-edit-slot-a"
+              class="reminder-form__input swap-edit-select"
+              aria-label="First slot to swap"
+            ></select>
+          </label>
+          <label class="swap-edit-pick">
+            <span class="swap-edit-pick__label">slot B</span>
+            <select
+              id="swap-edit-slot-b"
+              class="reminder-form__input swap-edit-select"
+              aria-label="Second slot to swap"
+            ></select>
+          </label>
+        </div>
+        <div class="roster-edit-addrow">
+          <button
+            type="button"
+            class="reminder-cal-btn reminder-cal-btn--secondary"
+            id="swap-edit-add"
+          >
+            add_swap
+          </button>
+        </div>
+        <ul
+          class="roster-edit-holiday-list"
+          id="swap-edit-list"
+          aria-label="Active swaps"
+        ></ul>
+        <p
+          id="swap-edit-status"
+          class="reminder-form__status"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <div class="roster-edit-actions">
+          <button type="button" class="reminder-cal-btn" id="swap-edit-save">
+            save_to_dynamodb
+          </button>
+          <button
+            type="button"
+            class="reminder-cal-btn reminder-cal-btn--secondary"
+            data-swap-edit-close
+          >
+            cancel
+          </button>
+        </div>
+      </div>
+    </dialog>
+
     <script src="api-config.js"></script>
     <script src="auth.js"></script>
     <script src="reminder-modal.js"></script>
     <script src="roster-editor.js"></script>
     <script src="app.js"></script>
+    <script src="swap-editor.js"></script>
   </body>
 </html>

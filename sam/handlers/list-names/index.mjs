@@ -56,6 +56,25 @@ function normalizeHolidays(raw) {
   return out.sort();
 }
 
+/** One-time name swap between two sharing Wednesdays { dateA, dateB }. */
+function normalizeSwaps(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const item of raw || []) {
+    if (!item || typeof item !== "object") continue;
+    let a = typeof item.dateA === "string" ? item.dateA.trim() : "";
+    let b = typeof item.dateB === "string" ? item.dateB.trim() : "";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a) || !/^\d{4}-\d{2}-\d{2}$/.test(b)) continue;
+    if (a === b) continue;
+    if (a > b) [a, b] = [b, a];
+    const key = `${a}|${b}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ dateA: a, dateB: b });
+  }
+  return out.sort((x, y) => x.dateA.localeCompare(y.dateA));
+}
+
 export const handler = async (event) => {
   const method = event.requestContext?.http?.method || event.httpMethod;
   if (method === "OPTIONS") return cors204();
@@ -81,8 +100,11 @@ export const handler = async (event) => {
     const holidays = normalizeHolidays(
       Array.isArray(result.Item?.holidays) ? result.Item.holidays : []
     );
+    const swaps = normalizeSwaps(
+      Array.isArray(result.Item?.swaps) ? result.Item.swaps : []
+    );
 
-    return json(200, { names, holidays });
+    return json(200, { names, holidays, swaps });
   } catch (err) {
     console.error(err);
     return json(500, { error: "Failed to load roster" });
